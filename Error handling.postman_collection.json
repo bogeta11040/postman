@@ -1,0 +1,241 @@
+{
+	"info": {
+		"_postman_id": "54892e98-21f3-4638-8e9c-67185f9e2d92",
+		"name": "Error handling",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "20888059"
+	},
+	"item": [
+		{
+			"name": "dodajKnjigu",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"const jsonData = pm.response.json();",
+							"let bookId = jsonData.ID;",
+							"pm.collectionVariables.set(\"flag\", false)",
+							"",
+							"function generateId() {",
+							"    const isbn = pm.collectionVariables.get(\"isbn\");",
+							"    let req = JSON.parse(pm.request.body.raw);",
+							"    const expectedId = isbn + req.aisle;",
+							"    return expectedId;",
+							"}",
+							"",
+							"function cleanup() {",
+							"    bookId = generateId();",
+							"    pm.collectionVariables.set(\"flag\", true)",
+							"    postman.setNextRequest(\"izbrisiKnjigu\");",
+							"    pm.collectionVariables.set(\"stored_id\", bookId);",
+							"}",
+							"",
+							"",
+							"pm.test(\"Validate Status Code is 200\", function() {",
+							"    try{ ",
+							"    pm.response.to.have.status(200);",
+							"    pm.expect(jsonData).have.property(\"Msg\");",
+							"    pm.expect(jsonData.Msg).to.eql(\"successfully added\")",
+							"    }",
+							"catch(err) {",
+							"    if (jsonData.Msg.includes(\"Exists\"))",
+							"    cleanup();",
+							"}",
+							"})",
+							"",
+							"pm.test(\"Validate headers cookie response time\", function() {",
+							"    pm.response.to.have.header(\"Content-Type\");",
+							"    pm.expect(pm.response.headers.get(\"Content-Type\")).to.eql(\"application/json;charset=UTF-8\");",
+							"    pm.expect(pm.response.responseTime).to.be.below(1200);",
+							"    pm.expect(pm.response.text()).to.include(\"successfully added\");",
+							"})",
+							"",
+							"pm.test(\"Validate ID\", function() {",
+							"    const expectedId = generateId();",
+							"    pm.expect(expectedId).to.eql(bookId)",
+							"})",
+							"",
+							"pm.collectionVariables.set(\"stored_id\", bookId)",
+							""
+						],
+						"type": "text/javascript"
+					}
+				},
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"const code = pm.globals.get(\"companyCode\");",
+							"const randomNum = pm.variables.replaceIn(\"{{$randomInt}}\");",
+							"pm.collectionVariables.set(\"author\", \"Dzon Stajnbek\");",
+							""
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n\"name\":\"{{name}}\",\n\"isbn\":\"RS456765\",\n\"aisle\":\"128\",\n\"author\":\"{{author}}\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{base_url}}/Library/Addbook.php",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"Library",
+						"Addbook.php"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "pronadjiKnjigu",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"const jsonData = pm.response.json();",
+							"const schema = {",
+							"  \"type\": \"array\",",
+							"  \"items\": [",
+							"    {",
+							"      \"type\": \"object\",",
+							"      \"properties\": {",
+							"        \"book_name\": {",
+							"          \"type\": \"string\"",
+							"        },",
+							"        \"isbn\": {",
+							"          \"type\": \"string\"",
+							"        },",
+							"        \"aisle\": {",
+							"          \"type\": \"string\"",
+							"        },",
+							"        \"author\": {",
+							"          \"type\": \"string\"",
+							"        }",
+							"      },",
+							"      \"required\": [",
+							"        \"book_name\",",
+							"        \"isbn\",",
+							"        \"aisle\",",
+							"        \"author\"",
+							"      ]",
+							"    }",
+							"  ]",
+							"};",
+							"",
+							"pm.test(\"Validate JSON response\", function() {",
+							"    pm.expect(jsonData[0].author).to.eql(pm.collectionVariables.get(\"author\"))",
+							"})",
+							"",
+							"pm.test(\"Validate JSON response schema\", function() {",
+							"    pm.response.to.have.status(200);",
+							"    pm.response.to.have.jsonSchema(schema);",
+							"})"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{base_url}}/Library/GetBook.php?ID={{stored_id}}",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"Library",
+						"GetBook.php"
+					],
+					"query": [
+						{
+							"key": "ID",
+							"value": "{{stored_id}}"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "izbrisiKnjigu",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"const jsonData = pm.response.json();",
+							"",
+							"pm.test(\"Validate JSON response schema\", function () {",
+							"    pm.response.to.have.status(200);",
+							"//    pm.expect(jsonData.msg).to.eql(\"book is successfully deleted\");",
+							"})",
+							"",
+							"if (pm.collectionVariables.get(\"flag\")) {",
+							"        postman.setNextRequest(\"dodajKnjigu\");",
+							"}"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n \n\"ID\" : \"{{stored_id}}\"\n \n} ",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{base_url}}/Library/DeleteBook.php",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"Library",
+						"DeleteBook.php"
+					]
+				}
+			},
+			"response": []
+		}
+	],
+	"variable": [
+		{
+			"key": "isbn",
+			"value": ""
+		},
+		{
+			"key": "author",
+			"value": ""
+		},
+		{
+			"key": "flag",
+			"value": ""
+		},
+		{
+			"key": "stored_id",
+			"value": ""
+		}
+	]
+}
